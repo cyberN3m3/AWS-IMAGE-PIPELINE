@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Resizer - Cloud Portfolio Project</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin-top: 50px;
+        }
+        
+        .card {
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .upload-area {
+            border: 3px dashed #667eea;
+            border-radius: 15px;
+            padding: 60px 20px;
+            text-align: center;
+            background: #f8f9fa;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .upload-area:hover {
+            border-color: #764ba2;
+            background: #e9ecef;
+        }
+        
+        .upload-area.dragover {
+            border-color: #28a745;
+            background: #d4edda;
+        }
+        
+        .upload-icon {
+            font-size: 64px;
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+        
+        .btn-custom {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: white;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-weight: bold;
+            transition: transform 0.2s;
+        }
+        
+        .btn-custom:hover {
+            transform: scale(1.05);
+            color: white;
+        }
+        
+        .progress {
+            height: 25px;
+            border-radius: 15px;
+        }
+        
+        .image-preview {
+            position: relative;
+            margin: 10px;
+            display: inline-block;
+        }
+        
+        .image-preview img {
+            max-width: 200px;
+            max-height: 200px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        
+        .download-btn {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(102, 126, 234, 0.9);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            cursor: pointer;
+        }
+        
+        .download-btn:hover {
+            background: rgba(118, 75, 162, 0.9);
+        }
+        
+        .variant-tabs {
+            margin-top: 30px;
+        }
+        
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .status-badge {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .status-processing {
+            background: #ffc107;
+            color: #000;
+        }
+        
+        .status-complete {
+            background: #28a745;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="text-center text-white mb-5">
+            <h1 class="display-4 fw-bold">
+                <i class="fas fa-images"></i> Cloud Image Resizer
+            </h1>
+            <p class="lead">Upload images and get 3 optimized sizes instantly!</p>
+            <p class="small">Powered by AWS Lambda • S3 • Serverless Architecture</p>
+        </div>
+
+        <!-- Upload Section -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <h3 class="card-title mb-4">
+                    <i class="fas fa-cloud-upload-alt"></i> Upload Images
+                </h3>
+                
+                <div class="upload-area" id="uploadArea">
+                    <i class="fas fa-cloud-upload-alt upload-icon"></i>
+                    <h4>Drag & Drop Images Here</h4>
+                    <p class="text-muted">or click to browse</p>
+                    <input type="file" id="fileInput" accept="image/*" multiple style="display: none;">
+                    <button class="btn btn-custom mt-3" onclick="document.getElementById('fileInput').click()">
+                        <i class="fas fa-folder-open"></i> Browse Files
+                    </button>
+                </div>
+
+                <!-- Upload Progress -->
+                <div id="uploadProgress" class="mt-4" style="display: none;">
+                    <h5>Uploading...</h5>
+                    <div class="progress">
+                        <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated bg-success" 
+                             role="progressbar" style="width: 0%">0%</div>
+                    </div>
+                    <p class="mt-2 text-muted" id="uploadStatus">Preparing upload...</p>
+                </div>
+
+                <!-- Upload Queue -->
+                <div id="uploadQueue" class="mt-4"></div>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div class="card" id="resultsSection" style="display: none;">
+            <div class="card-body">
+                <h3 class="card-title mb-4">
+                    <i class="fas fa-check-circle text-success"></i> Processed Images
+                </h3>
+
+                <!-- Variant Tabs -->
+                <ul class="nav nav-pills variant-tabs mb-4" id="variantTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="thumbnail-tab" data-bs-toggle="pill" 
+                                data-bs-target="#thumbnail" type="button">
+                            <i class="fas fa-th"></i> Thumbnail (150px)
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="mobile-tab" data-bs-toggle="pill" 
+                                data-bs-target="#mobile" type="button">
+                            <i class="fas fa-mobile-alt"></i> Mobile (480px)
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="web-tab" data-bs-toggle="pill" 
+                                data-bs-target="#web" type="button">
+                            <i class="fas fa-desktop"></i> Web (1024px)
+                        </button>
+                    </li>
+                    <li class="nav-item ms-auto">
+                        <button class="btn btn-sm btn-outline-primary" onclick="downloadAll()">
+                            <i class="fas fa-download"></i> Download All
+                        </button>
+                    </li>
+                </ul>
+
+                <!-- Variant Content -->
+                <div class="tab-content" id="variantContent">
+                    <div class="tab-pane fade show active" id="thumbnail" role="tabpanel">
+                        <div id="thumbnailImages" class="text-center"></div>
+                    </div>
+                    <div class="tab-pane fade" id="mobile" role="tabpanel">
+                        <div id="mobileImages" class="text-center"></div>
+                    </div>
+                    <div class="tab-pane fade" id="web" role="tabpanel">
+                        <div id="webImages" class="text-center"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="text-center text-white mt-5 mb-3">
+            <p class="small">
+                <i class="fas fa-code"></i> Built with AWS Lambda, S3, and JavaScript
+                <br>
+                Portfolio Project by [Anyasi Chineme]
+            </p>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- AWS SDK -->
+    <script src="https://sdk.amazonaws.com/js/aws-sdk-2.1000.0.min.js"></script>
+    
+    <!-- Custom JavaScript -->
+    <script src="app.js"></script>
+</body>
+</html>
