@@ -1,0 +1,10 @@
+# Terraform: state holds real account IDs and ARNs; tfvars holds your email
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+crash.log
+# Lambda build artefacts
+*.zip
+__pycache__/
